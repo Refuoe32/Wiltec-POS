@@ -1,24 +1,21 @@
 # WilTec POS
 
-Point of sale for WilTec Solutions (Mokhotlong, Lesotho): sales, repairs, inventory, purchasing,
-customers, till, expenses and reports. Built with Next.js (React) + PostgreSQL (Supabase).
+Point of sale for WilTec Solutions (Mokhotlong, Lesotho). Next.js (React) + PostgreSQL (Supabase).
+Sales + barcode scanning + discounts, repairs, inventory, purchasing, customers, till, daily reports,
+expenses, reports, staff accounts with photos, tasks and sign-in/sign-out monitoring.
 
-## 1. Set up the database (Supabase)
-1. Open your Supabase project -> **Connect** (top bar) -> **Transaction pooler** -> copy the URI (port 6543).
-2. Copy `.env.example` to `.env.local` and paste it as `DATABASE_URL` (replace `[YOUR-PASSWORD]`).
-3. Set `JWT_SECRET` to any long random string.
+## First install
+1. `.env.local` (copy of `.env.example`): set `DATABASE_URL` (Supabase -> Connect -> Transaction pooler, password with letters/numbers only) and `JWT_SECRET`.
+2. `npm install`
+3. `npm run db:setup`   (creates all tables - only on a NEW empty database)
+4. `npm run seed -- you@email.com YourPassword "Your Name"`   (creates the owner login)
+5. `npm run dev` -> http://localhost:3000
 
-## 2. Run it
-```
-npm install
-npm run db:setup                                   # creates all tables
-npm run seed -- you@email.com YourPassword "Your Name"   # creates the owner login
-npm run dev                                        # http://localhost:3000
-```
+## Updating an existing install (you already ran db:setup before)
+1. Replace the project files with the new ones (keep your `.env.local`).
+2. `npm install`
+3. `npm run db:migrate`   (adds the new tables/columns; safe to run again)
+4. `npm run dev`
 
-## 3. Put it online (Vercel)
-Push this folder to GitHub -> Vercel -> New Project -> import it. Add the environment variables
-`DATABASE_URL` and `JWT_SECRET` -> Deploy. (Use a separate project from your website.)
-
-## Roles
-owner: everything · manager: everything except staff · cashier: sell, repairs, customers, till · technician: repairs and view stock
+Optional `.env.local` setting: `IDLE_MINUTES=30` (auto sign-out after this many idle minutes).
+Full description of the system: see the System Report document.

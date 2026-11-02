@@ -1,12 +1,13 @@
 import { route, SELL, fail } from '@/lib/api';
 import { q } from '@/lib/db';
-export const GET = route(null, ({ url }) => {
+export const GET = route(null, ({ s, url }) => {
+  const mine = url.searchParams.get('mine') === '1' ? s.id : null;
   const st = url.searchParams.get('status') || '', t = url.searchParams.get('q') || '';
   return q(`select r.*,c.name customer,c.phone customer_phone,u.full_name technician from repair_jobs r
     join customers c on c.id=r.customer_id left join users u on u.id=r.technician_id
     where ($1='' or r.status::text=$1) and ($2='' or r.job_no ilike $3 or c.name ilike $3 or r.brand_model ilike $3 or c.phone ilike $3)
-    and ($1<>'' or r.status::text not in ('collected','cancelled') or $2<>'')
-    order by r.received_at desc limit 200`, [st, t, `%${t}%`]);
+    and ($1<>'' or r.status::text not in ('collected','cancelled') or $2<>'') and ($4::uuid is null or r.technician_id=$4::uuid)
+    order by r.received_at desc limit 200`, [st, t, `%${t}%`, mine]);
 });
 export const POST = route(SELL, async ({ s, body: b }) => {
   if (!b.customer_id || !b.device_type || !b.fault_reported) fail('Customer, device and fault are required');

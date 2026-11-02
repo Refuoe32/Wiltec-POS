@@ -7,9 +7,12 @@
     "build": "next build",
     "start": "next start",
     "db:setup": "node --env-file=.env.local scripts/setup-db.js",
+    "db:migrate": "node --env-file=.env.local scripts/migrate.js",
     "seed": "node --env-file=.env.local scripts/seed.js"
   },
   "dependencies": {
+    "@zxing/browser": "0.1.5",
+    "@zxing/library": "0.21.3",
     "bcryptjs": "2.4.3",
     "jose": "5.9.6",
     "next": "14.2.15",

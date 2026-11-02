@@ -2,7 +2,7 @@ import { route, MGR } from '@/lib/api';
 import { q } from '@/lib/db';
 export const GET = route(MGR, async () => {
   const ok = "status in ('completed','partially_refunded')";
-  const [today] = await q(`select count(*)::int n, coalesce(sum(total),0) total from sales where ${ok} and created_at::date=current_date`);
+  const [today] = await q(`select count(*)::int n, coalesce(sum(total),0) total from sales where ${ok} and (created_at at time zone 'Africa/Maseru')::date=(now() at time zone 'Africa/Maseru')::date`);
   const [month] = await q(`select count(*)::int n, coalesce(sum(total),0) total, coalesce(sum(vat_amount),0) vat from sales where ${ok} and date_trunc('month',created_at)=date_trunc('month',now())`);
   const [profit] = await q(`select coalesce(sum((si.unit_price*si.qty-si.discount-si.unit_cost*si.qty) - si.vat_amount),0) gross from sale_items si join sales s on s.id=si.sale_id
     where s.status='completed' and date_trunc('month',s.created_at)=date_trunc('month',now())`);

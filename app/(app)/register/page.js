@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { api, money, dt } from '@/lib/client';
+import { api, money, dt, today } from '@/lib/client';
 export default function Register() {
-  const [d, setD] = useState(null), [amt, setAmt] = useState(''), [note, setNote] = useState(''), [err, setErr] = useState(''), [day, setDay] = useState(new Date().toISOString().slice(0, 10)), [sales, setSales] = useState([]), [me, setMe] = useState({});
+  const [d, setD] = useState(null), [amt, setAmt] = useState(''), [note, setNote] = useState(''), [err, setErr] = useState(''), [day, setDay] = useState(today()), [sales, setSales] = useState([]), [me, setMe] = useState({});
   const load = () => api('/api/register').then(setD).catch(e => setErr(e.message));
   const loadSales = () => api('/api/sales?day=' + day).then(setSales);
   useEffect(() => { load(); api('/api/me').then(setMe); }, []);

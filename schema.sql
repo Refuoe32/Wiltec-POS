@@ -310,3 +310,40 @@ DO $$ DECLARE t record; BEGIN
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t.tablename);
   END LOOP;
 END $$;
+
+-- ---------- STAFF SESSIONS (sign-in / sign-out monitoring) ----------
+-- Staff sign-in / sign-out records (safe to run more than once)
+CREATE TABLE IF NOT EXISTS staff_sessions (
+  id         BIGSERIAL PRIMARY KEY,
+  user_id    UUID NOT NULL REFERENCES users(id),
+  login_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  logout_at  TIMESTAMPTZ,
+  end_reason TEXT,            -- signout | timeout | locked
+  ip         TEXT,
+  device     TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_staff_sessions_user ON staff_sessions (user_id, login_at DESC);
+CREATE INDEX IF NOT EXISTS idx_staff_sessions_login ON staff_sessions (login_at DESC);
+ALTER TABLE staff_sessions ENABLE ROW LEVEL SECURITY;
+
+-- ---------- DISCOUNTS, TASKS, PHOTOS ----------
+-- Passport photo, discount audit fields, and staff tasks (safe to run more than once)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS photo TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_reason TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount_approved_by UUID REFERENCES users(id);
+CREATE TABLE IF NOT EXISTS tasks (
+  id            BIGSERIAL PRIMARY KEY,
+  title         TEXT NOT NULL,
+  description   TEXT,
+  assigned_to   UUID NOT NULL REFERENCES users(id),
+  assigned_by   UUID REFERENCES users(id),
+  priority      TEXT NOT NULL DEFAULT 'normal' CHECK (priority IN ('low','normal','high','urgent')),
+  status        TEXT NOT NULL DEFAULT 'todo' CHECK (status IN ('todo','in_progress','done','cancelled')),
+  due_date      DATE,
+  repair_job_id UUID REFERENCES repair_jobs(id),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  completed_at  TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_tasks_user ON tasks (assigned_to, status);
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;

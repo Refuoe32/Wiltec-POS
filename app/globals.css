@@ -37,3 +37,5 @@ tr.click{cursor:pointer}tr.click:hover{background:#f6f9f8}
 .scroll{overflow-x:auto}
 @media(max-width:900px){.app{grid-template-columns:1fr}.side{position:static;height:auto;flex-direction:row;flex-wrap:wrap}.side .who{margin:0}.pos,.g2,.g3,.g4{grid-template-columns:1fr}.main{padding:14px}.cart{position:static}}
 @media print{body{background:#fff}.noprint{display:none!important}}
+@media print{.app{display:block}.main{padding:0}.card{border:none;padding:0}.pr-only{display:block!important}h1{font-size:1.2rem}table{font-size:.85rem}.grid{gap:8px}}
+.pr-only{display:none}

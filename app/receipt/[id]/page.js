@@ -21,6 +21,7 @@ export default function Receipt({ params }) {
         </div>
       ))}
       <hr />
+      {Number(sale.discount) > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Discount{sale.discount_reason ? ` (${sale.discount_reason})` : ''}</span><span>-{Number(sale.discount).toFixed(2)}</span></div>}
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15 }}><b>TOTAL</b><b>{money(sale.total)}</b></div>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>incl. VAT {st.vat_rate}%</span><span>{Number(sale.vat_amount).toFixed(2)}</span></div>
       <hr />

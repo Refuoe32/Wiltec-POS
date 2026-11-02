@@ -1,9 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api, money } from '@/lib/client';
+import CameraScanner from '@/components/CameraScanner';
 const blank = { kind: 'product', sku: '', barcode: '', name: '', category_id: '', cost_price: '', sell_price: '', stock_qty: '', reorder_level: 2, has_serial: false, warranty_days: 0, vat_applies: true, is_active: true };
 export default function Inventory() {
-  const [rows, setRows] = useState([]), [cats, setCats] = useState([]), [q, setQ] = useState(''), [f, setF] = useState(null), [adj, setAdj] = useState(null), [err, setErr] = useState(''), [me, setMe] = useState({});
+  const [rows, setRows] = useState([]), [cats, setCats] = useState([]), [q, setQ] = useState(''), [f, setF] = useState(null), [adj, setAdj] = useState(null), [err, setErr] = useState(''), [me, setMe] = useState({}), [cam, setCam] = useState(false);
   const mgr = ['owner', 'manager'].includes(me.role);
   const load = () => api('/api/items?all=1&q=' + encodeURIComponent(q)).then(setRows).catch(e => setErr(e.message));
   useEffect(() => { api('/api/me').then(setMe); api('/api/categories').then(setCats); }, []);
@@ -40,7 +41,7 @@ export default function Inventory() {
           {!f.id && <div className="f"><label>Type</label><select value={f.kind} onChange={e => set('kind', e.target.value)}><option value="product">Product (tracks stock)</option><option value="service">Service</option></select></div>}
           <div className="f"><label>Name</label><input value={f.name} onChange={e => set('name', e.target.value)} /></div>
           <div className="f"><label>SKU</label><input value={f.sku} onChange={e => set('sku', e.target.value)} /></div>
-          <div className="f"><label>Barcode</label><input value={f.barcode || ''} onChange={e => set('barcode', e.target.value)} /></div>
+          <div className="f"><label>Barcode (click here and scan, or use the camera)</label><div className="row" style={{ flexWrap: 'nowrap' }}><input value={f.barcode || ''} onChange={e => set('barcode', e.target.value)} onKeyDown={e => e.key === 'Enter' && e.preventDefault()} /><button type="button" className="btn sm" onClick={() => setCam(true)}>Camera</button></div></div>
           <div className="f"><label>Category <a href="#" onClick={e => { e.preventDefault(); newCat(); }}>+ new</a></label><select value={f.category_id || ''} onChange={e => set('category_id', e.target.value)}><option value="">—</option>{cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
           <div className="f"><label>Cost price (M)</label><input type="number" step="0.01" value={f.cost_price} onChange={e => set('cost_price', e.target.value)} /></div>
           <div className="f"><label>Selling price (M, VAT included)</label><input type="number" step="0.01" value={f.sell_price} onChange={e => set('sell_price', e.target.value)} /></div>
@@ -55,6 +56,8 @@ export default function Inventory() {
         </div>
         <div className="row"><button className="btn pri sp" onClick={save}>Save item</button><button className="btn" onClick={() => setF(null)}>Cancel</button></div>
       </div></div>}
+
+      {cam && <CameraScanner onScan={c => set('barcode', c)} onClose={() => setCam(false)} />}
 
       {adj && <div className="modal"><div className="card">
         <h2>Adjust stock · {adj.name}</h2>{err && <div className="err">{err}</div>}

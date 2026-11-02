@@ -5,10 +5,10 @@ const STATUSES = ['received', 'diagnosing', 'quoted', 'approved', 'waiting_parts
 const label = s => s.replace('_', ' ');
 export default function Repairs() {
   const [rows, setRows] = useState([]), [st, setSt] = useState(''), [q, setQ] = useState(''), [custs, setCusts] = useState([]), [techs, setTechs] = useState([]), [items, setItems] = useState([]);
-  const [f, setF] = useState(null), [d, setD] = useState(null), [err, setErr] = useState(''), [method, setMethod] = useState('cash');
-  const load = () => api(`/api/repairs?status=${st}&q=${encodeURIComponent(q)}`).then(setRows).catch(e => setErr(e.message));
-  useEffect(() => { api('/api/customers').then(setCusts); api('/api/users').then(u => setTechs(u.filter(x => x.is_active))); api('/api/items?q=').then(setItems); }, []);
-  useEffect(() => { const t = setTimeout(load, 200); return () => clearTimeout(t); }, [st, q]);
+  const [f, setF] = useState(null), [d, setD] = useState(null), [err, setErr] = useState(''), [method, setMethod] = useState('cash'), [mine, setMine] = useState(false);
+  const load = () => api(`/api/repairs?status=${st}&q=${encodeURIComponent(q)}&mine=${mine ? 1 : 0}`).then(setRows).catch(e => setErr(e.message));
+  useEffect(() => { api('/api/me').then(m => { if (m.role === 'technician') setMine(true); }); api('/api/customers').then(setCusts); api('/api/users').then(u => setTechs(u.filter(x => x.is_active))); api('/api/items?q=').then(setItems); }, []);
+  useEffect(() => { const t = setTimeout(load, 200); return () => clearTimeout(t); }, [st, q, mine]);
   const open = async id => { setErr(''); setD(await api('/api/repairs/' + id)); };
   const set = (k, v) => setF(x => ({ ...x, [k]: v }));
   async function create() { setErr(''); try { await api('/api/repairs', f); setF(null); load(); } catch (e) { setErr(e.message); } }
@@ -24,12 +24,13 @@ export default function Repairs() {
       <div className="row" style={{ marginBottom: 12 }}>
         <input placeholder="Search job, customer, device…" value={q} onChange={e => setQ(e.target.value)} style={{ width: 300 }} />
         <select value={st} onChange={e => setSt(e.target.value)}><option value="">Open jobs</option>{STATUSES.map(s => <option key={s} value={s}>{label(s)}</option>)}</select>
+        <label style={{ margin: 0 }}><input type="checkbox" checked={mine} onChange={e => setMine(e.target.checked)} /> Only jobs assigned to me</label>
       </div>
       {err && !f && !d && <div className="err">{err}</div>}
       <div className="card scroll"><table>
-        <thead><tr><th>Job</th><th>Customer</th><th>Device</th><th>Fault</th><th>Status</th><th>Promised</th><th className="n">Quote</th></tr></thead>
+        <thead><tr><th>Job</th><th>Customer</th><th>Device</th><th>Fault</th><th>Technician</th><th>Status</th><th>Promised</th><th className="n">Quote</th></tr></thead>
         <tbody>{rows.map(r => <tr key={r.id} className="click" onClick={() => open(r.id)}><td><b>{r.job_no}</b></td><td>{r.customer}</td><td>{r.device_type} {r.brand_model}</td><td>{r.fault_reported.slice(0, 40)}</td>
-          <td><span className={'tag ' + (r.status === 'ready' ? 'ok' : r.status === 'waiting_parts' ? 'warn' : '')}>{label(r.status)}</span></td><td>{r.promised_date?.slice(0, 10)}</td><td className="n">{r.quote_amount ? money(r.quote_amount) : '—'}</td></tr>)}</tbody>
+          <td>{r.technician || '—'}</td><td><span className={'tag ' + (r.status === 'ready' ? 'ok' : r.status === 'waiting_parts' ? 'warn' : '')}>{label(r.status)}</span></td><td>{r.promised_date?.slice(0, 10)}</td><td className="n">{r.quote_amount ? money(r.quote_amount) : '—'}</td></tr>)}</tbody>
       </table>{!rows.length && <p className="muted">No jobs.</p>}</div>
 
       {f && <div className="modal wide"><div className="card"><h2>New repair job</h2>{err && <div className="err">{err}</div>}
