@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api, money, dt, mlabel } from '@/lib/client';
+import ExportBar from '@/components/ExportBar';
 export default function Customers() {
   const [rows, setRows] = useState([]), [q, setQ] = useState(''), [f, setF] = useState(null), [sel, setSel] = useState(null), [hist, setHist] = useState(null), [err, setErr] = useState('');
   const load = () => api('/api/customers?q=' + encodeURIComponent(q)).then(setRows).catch(e => setErr(e.message));
@@ -14,7 +15,7 @@ export default function Customers() {
   }
   return (
     <div>
-      <div className="row"><h1 className="sp">Customers</h1><button className="btn pri" onClick={() => { setErr(''); setF({ name: '', phone: '', email: '', address: '', is_business: false, credit_limit: 0, notes: '' }); }}>Add customer</button></div>
+      <div className="row"><h1 className="sp">Customers</h1>{rows.length > 0 && <ExportBar name="customer-list" build={() => ({ title: 'Customer List', subtitle: 'Generated ' + new Date().toLocaleString('en-GB', { timeZone: 'Africa/Maseru' }), sections: [{ title: 'Customers', head: ['Name', 'Phone', 'Type', 'Owes'], rows: rows.map(c => [c.name, c.phone || '', c.is_business ? 'Business' : 'Individual', money(c.balance_owing)]) }] })} />}<button className="btn pri" onClick={() => { setErr(''); setF({ name: '', phone: '', email: '', address: '', is_business: false, credit_limit: 0, notes: '' }); }}>Add customer</button></div>
       <input style={{ width: '100%', maxWidth: 420, marginBottom: 12 }} placeholder="Search name or phone…" value={q} onChange={e => setQ(e.target.value)} />
       {err && !f && <div className="err">{err}</div>}
       <div className="card scroll"><table>

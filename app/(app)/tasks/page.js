@@ -36,7 +36,7 @@ export default function Tasks() {
                   {['todo', 'in_progress'].includes(t.status) && <button className="btn sm pri" onClick={() => set(t, 'done')}>Done</button>}
                   {mgr && ['todo', 'in_progress'].includes(t.status) && <> <button className="btn sm bad" onClick={() => set(t, 'cancelled')}>Cancel</button></>}
                   {t.status === 'done' && <button className="btn sm" onClick={() => set(t, 'todo')}>Reopen</button>}</td>
-              </tr>))}</tbody></table>{!d.tasks.length && <p className="muted">No tasks. 🎉</p>}</div>
+              </tr>))}</tbody></table>{!d.tasks.length && <p className="muted">No tasks.</p>}</div>
         <div className="card scroll"><h2>Repair jobs assigned {mgr && !who ? 'to staff' : 'to me'}</h2>
           <table><thead><tr><th>Job</th><th>Customer</th><th>Device</th>{(mgr && !who) && <th>Technician</th>}<th>Status</th><th>Promised</th></tr></thead>
             <tbody>{d.repairs.map(r => <tr key={r.id}><td><Link href="/repairs"><b>{r.job_no}</b></Link></td><td>{r.customer}</td><td>{r.device_type} {r.brand_model}</td>{(mgr && !who) && <td>{r.technician}</td>}<td><span className="tag">{r.status.replace('_', ' ')}</span></td><td>{r.promised || '—'}</td></tr>)}</tbody></table>

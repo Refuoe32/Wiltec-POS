@@ -5,20 +5,11 @@ import { usePathname } from 'next/navigation';
 import { api } from '@/lib/client';
 import Avatar from '@/components/Avatar';
 const IDLE_MIN = 30;   // keep equal to IDLE_MINUTES on the server (default 30)
+const ALL = ['owner', 'manager', 'cashier', 'technician'], MGR = ['owner', 'manager'], SELL = ['owner', 'manager', 'cashier'];
 const NAV = [
-  ['/pos', 'Sell', ['owner', 'manager', 'cashier']],
-  ['/tasks', 'My tasks', ['owner', 'manager', 'cashier', 'technician']],
-  ['/repairs', 'Repairs', ['owner', 'manager', 'cashier', 'technician']],
-  ['/inventory', 'Inventory', ['owner', 'manager', 'cashier', 'technician']],
-  ['/customers', 'Customers', ['owner', 'manager', 'cashier']],
-  ['/purchasing', 'Purchasing', ['owner', 'manager']],
-  ['/register', 'Till', ['owner', 'manager', 'cashier']],
-  ['/daily', 'Daily report', ['owner', 'manager', 'cashier']],
-  ['/expenses', 'Expenses', ['owner', 'manager']],
-  ['/dashboard', 'Reports', ['owner', 'manager']],
-  ['/activity', 'Staff activity', ['owner', 'manager']],
-  ['/users', 'Staff', ['owner', 'manager']],
-  ['/account', 'My account', ['owner', 'manager', 'cashier', 'technician']],
+  ['/pos', 'POS', SELL], ['/repairs', 'Repairs', ALL], ['/inventory', 'Inventory', ALL], ['/stock', 'Stock', MGR], ['/customers', 'Customers', SELL],
+  ['/purchasing', 'Purchasing', MGR], ['/register', 'Till', SELL], ['/daily', 'Daily report', SELL], ['/expenses', 'Expenses', MGR],
+  ['/dashboard', 'Reports', MGR], ['/activity', 'Staff activity', MGR], ['/users', 'Staff', MGR], ['/tasks', 'My tasks', ALL],
 ];
 export default function AppLayout({ children }) {
   const [me, setMe] = useState(null); const path = usePathname(); const lastAct = useRef(Date.now());
@@ -39,11 +30,20 @@ export default function AppLayout({ children }) {
   return (
     <div className="app">
       <nav className="side noprint">
-        <div className="brand">WilTec POS<small>Mokhotlong, Lesotho</small></div>
+        <div className="brand">WILTEC SYSTEMS<small>Mokhotlong, Lesotho</small></div>
         {me && NAV.filter(n => n[2].includes(me.role)).map(([h, l]) => <Link key={h} href={h} className={path.startsWith(h) ? 'on' : ''}>{l}</Link>)}
-        <div className="who">{me && <Avatar photo={me.photo} name={me.name} size={46} />}<div style={{ marginTop: 6 }}>{me?.name}</div>{me?.role} · <a href="#" onClick={e => { e.preventDefault(); out(); }} style={{ color: '#9fd8cf' }}>Sign out</a></div>
+        <div className="fill" />
+        {me?.role === 'owner' && <Link href="/settings" className={path.startsWith('/settings') ? 'on' : ''}>Settings</Link>}
+        <Link href="/account" className={path.startsWith('/account') ? 'on' : ''}>My account</Link>
+        <button className="lnk" onClick={out}>Logout</button>
       </nav>
-      <main className="main">{children}</main>
+      <div className="wrap">
+        <header className="top noprint">
+          <span>Hello, <b>{me?.name || '…'}</b> <span className="muted">· {me?.role}</span></span>
+          {me && <Link href="/account"><Avatar photo={me.photo} name={me.name} size={38} round /></Link>}
+        </header>
+        <main className="main">{children}</main>
+      </div>
     </div>
   );
 }

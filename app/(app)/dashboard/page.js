@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api, money, mlabel } from '@/lib/client';
+import ExportBar from '@/components/ExportBar';
 export default function Dashboard() {
   const [d, setD] = useState(null), [err, setErr] = useState('');
   useEffect(() => { api('/api/reports').then(setD).catch(e => setErr(e.message)); }, []);
@@ -8,9 +9,19 @@ export default function Dashboard() {
   if (!d) return <p>Loading…</p>;
   const max = Math.max(1, ...d.daily.map(x => x.total));
   const net = d.profit - d.expenses;
+  const build = () => ({
+    title: 'Business Report', subtitle: 'Generated ' + new Date().toLocaleString('en-GB', { timeZone: 'Africa/Maseru' }),
+    sections: [
+      { title: 'Key figures', rows: [['Sales today', `${money(d.today.total)} (${d.today.n} sales)`], ['Sales this month', `${money(d.month.total)} (${d.month.n} sales)`], ['Gross profit this month (ex. VAT)', money(d.profit)], ['Expenses this month', money(d.expenses)], ['Profit after expenses', money(net)], ['VAT collected this month', money(d.month.vat)], ['Open repair jobs', d.openRepairs], ['Owed by customers', money(d.owing)], ['Stock value at cost', money(d.stockValue.cost)], ['Stock value at retail', money(d.stockValue.retail)]] },
+      { title: 'Sales, last 14 days', head: ['Day', 'Sales'], rows: d.daily.map(x => [x.day, money(x.total)]) },
+      { title: 'Best sellers (30 days)', head: ['Item', 'Units', 'Value'], rows: d.top.map(t => [t.name, t.units, money(t.revenue)]) },
+      { title: 'Payments by method (30 days)', head: ['Method', 'Amount'], rows: d.methods.map(m => [mlabel(m.method), money(m.total)]) },
+      { title: 'Low stock', head: ['Item', 'In stock', 'Alert level'], rows: d.low.map(l => [l.name, l.stock_qty, l.reorder_level]) },
+    ],
+  });
   return (
     <div>
-      <h1>Reports</h1>
+      <div className="row" style={{ marginBottom: 14 }}><h1 className="sp" style={{ margin: 0 }}>Reports</h1><ExportBar name="business-report" build={build} /></div>
       <div className="grid g4" style={{ marginBottom: 16 }}>
         <div className="card stat"><b>{money(d.today.total)}</b><span>Sales today ({d.today.n})</span></div>
         <div className="card stat"><b>{money(d.month.total)}</b><span>Sales this month ({d.month.n})</span></div>

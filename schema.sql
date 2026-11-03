@@ -347,3 +347,27 @@ CREATE TABLE IF NOT EXISTS tasks (
 );
 CREATE INDEX IF NOT EXISTS idx_tasks_user ON tasks (assigned_to, status);
 ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+
+-- ---------- PRODUCT IMAGES ----------
+-- Product pictures for the POS grid (safe to run more than once)
+ALTER TABLE items ADD COLUMN IF NOT EXISTS image TEXT;
+
+-- ---------- REGISTRATION APPROVAL ----------
+-- Self-registration: new accounts wait for owner/manager approval (safe to run more than once)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_status_check;
+ALTER TABLE users ADD CONSTRAINT users_status_check CHECK (status IN ('active','pending','rejected'));
+
+-- ---------- RETAIL CONTROLS ----------
+-- Retail controls: cash tendered/change, till per cashier, stock write-off, receipt details (safe to run more than once)
+ALTER TYPE stock_move_type ADD VALUE IF NOT EXISTS 'writeoff';
+ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS unit_cost NUMERIC(12,2);
+ALTER TABLE sales    ADD COLUMN IF NOT EXISTS cash_tendered NUMERIC(12,2);
+ALTER TABLE sales    ADD COLUMN IF NOT EXISTS change_given  NUMERIC(12,2) NOT NULL DEFAULT 0;
+ALTER TABLE sales    ADD COLUMN IF NOT EXISTS print_count   INT NOT NULL DEFAULT 0;
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS session_id    INT REFERENCES register_sessions(id);
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS created_at    TIMESTAMPTZ NOT NULL DEFAULT now();
+INSERT INTO settings (key, value) VALUES
+  ('business_phone', ''), ('vat_number', ''), ('require_open_till', 'yes'),
+  ('return_policy', 'Goods may be returned within 7 days with this receipt and in original condition. Software and special orders are not refundable.')
+ON CONFLICT (key) DO NOTHING;

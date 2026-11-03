@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { api, money, METHODS, mlabel } from '@/lib/client';
+import ExportBar from '@/components/ExportBar';
 const CATS = ['Rent', 'Electricity', 'Airtime & data', 'Transport', 'Salaries', 'Supplies', 'Marketing', 'Other'];
 export default function Expenses() {
   const [rows, setRows] = useState([]), [month, setMonth] = useState(new Date().toISOString().slice(0, 7)), [f, setF] = useState({ category: CATS[0], description: '', amount: '', method: 'cash' }), [err, setErr] = useState('');
@@ -17,7 +18,7 @@ export default function Expenses() {
         <select value={f.method} onChange={e => setF({ ...f, method: e.target.value })}>{METHODS.slice(0, 5).map(m => <option key={m[0]} value={m[0]}>{m[1]}</option>)}</select>
         <button className="btn pri" onClick={add}>Add expense</button>
       </div>
-      <div className="card scroll"><div className="row"><h2 className="sp">Month total {money(rows.reduce((a, r) => a + Number(r.amount), 0))}</h2><input type="month" value={month} onChange={e => setMonth(e.target.value)} /></div>
+      <div className="card scroll"><div className="row"><h2 className="sp">Month total {money(rows.reduce((a, r) => a + Number(r.amount), 0))}</h2><ExportBar name={'expenses-' + month} build={() => ({ title: 'Expenses ' + month, subtitle: 'Total ' + money(rows.reduce((a, r) => a + Number(r.amount), 0)), sections: [{ title: 'Expenses', head: ['Date', 'Category', 'Description', 'Paid by', 'Amount'], rows: rows.map(r => [r.spent_on.slice(0, 10), r.category, r.description || '', mlabel(r.method), money(r.amount)]) }] })} /><input type="month" value={month} onChange={e => setMonth(e.target.value)} /></div>
         <table><thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Paid by</th><th className="n">Amount</th></tr></thead>
           <tbody>{rows.map(r => <tr key={r.id}><td>{r.spent_on.slice(0, 10)}</td><td>{r.category}</td><td>{r.description}</td><td>{mlabel(r.method)}</td><td className="n">{money(r.amount)}</td></tr>)}</tbody></table>
         {!rows.length && <p className="muted">No expenses this month.</p>}</div>

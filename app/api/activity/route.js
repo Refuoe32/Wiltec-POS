@@ -16,6 +16,11 @@ export const GET = route(MGR, async ({ url }) => {
     summary: await q(`select u.id,u.full_name,u.role,
       (select count(*) from staff_sessions ss where ss.user_id=u.id and ${between('ss.login_at')})::int sessions,
       (select coalesce(sum(extract(epoch from (coalesce(ss.logout_at,ss.last_seen)-ss.login_at))),0) from staff_sessions ss where ss.user_id=u.id and ${between('ss.login_at')})::float seconds,
+      (select count(*) from audit_log a where a.user_id=u.id and a.action in ('pos.void_line','pos.cancel_sale') and ${between('a.created_at')})::int voids,
+      (select count(*) from audit_log a where a.user_id=u.id and a.action='sale.refund' and ${between('a.created_at')})::int refunds,
+      (select count(*) from audit_log a where a.user_id=u.id and a.action='sale.discount' and ${between('a.created_at')})::int discounts,
+      (select count(*) from audit_log a where a.user_id=u.id and a.action in ('sale.price_override','receipt.reprint') and ${between('a.created_at')})::int overrides,
+      (select count(*) from audit_log a where a.user_id=u.id and a.action='login.failed' and ${between('a.created_at')})::int failed_logins,
       (select count(*) from tasks t where t.assigned_to=u.id and t.status='done' and ${between('t.completed_at')})::int tasks_done,
       (select count(*) from sales s where s.cashier_id=u.id and s.status in ('completed','partially_refunded') and ${between('s.created_at')})::int sales_count,
       (select coalesce(sum(total),0) from sales s where s.cashier_id=u.id and s.status in ('completed','partially_refunded') and ${between('s.created_at')})::float sales_total

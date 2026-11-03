@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 export async function middleware(req) {
   const p = req.nextUrl.pathname;
-  if (p === '/login' || p === '/api/login') return NextResponse.next();
+  if (p === '/login' || p === '/api/login' || p === '/api/signup') return NextResponse.next();
   try {
     await jwtVerify(req.cookies.get('wt')?.value, new TextEncoder().encode(process.env.JWT_SECRET));
     return NextResponse.next();
@@ -11,4 +11,4 @@ export async function middleware(req) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 }
-export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg).*)'] };
+export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.svg|login-bg.jpg).*)'] };

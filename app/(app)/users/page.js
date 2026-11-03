@@ -1,12 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { api, dt, photoFromFile } from '@/lib/client';
+import { api, dt } from '@/lib/client';
+import PhotoEditor from '@/components/PhotoEditor';
 import Avatar from '@/components/Avatar';
 const ROLES = { cashier: 'Cashier: sells, takes payments, opens/closes till, repairs intake, own daily report', technician: 'Technician: sees and updates repair jobs and stock (cannot sell)', manager: 'Manager: everything except managing owners/managers; can refund, adjust stock, see reports', owner: 'Owner: full access including staff management' };
 const gen = () => 'Wt' + Math.random().toString(36).slice(2, 8) + Math.floor(10 + Math.random() * 89);
 export default function Users() {
   const blank = () => ({ full_name: '', email: '', phone: '', password: gen(), role: 'cashier' });
-  const [rows, setRows] = useState([]), [f, setF] = useState(blank()), [err, setErr] = useState(''), [ok, setOk] = useState(''), [me, setMe] = useState({});
+  const [rows, setRows] = useState([]), [f, setF] = useState(blank()), [err, setErr] = useState(''), [ok, setOk] = useState(''), [me, setMe] = useState({}), [edit, setEdit] = useState(null), [pick, setPick] = useState({});
   const load = () => api('/api/users').then(setRows);
   useEffect(() => { load(); api('/api/me').then(setMe); }, []);
   const isOwner = me.role === 'owner';
@@ -17,7 +18,8 @@ export default function Users() {
     catch (e) { setErr(e.message); }
   }
   async function upd(u, body) { setErr(''); setOk(''); try { await api('/api/users', { id: u.id, ...body }, 'PUT'); load(); } catch (e) { setErr(e.message); } }
-  async function setPhoto(u, file) { if (!file) return; setErr(''); try { await api('/api/users/photo', { id: u.id, photo: await photoFromFile(file) }); load(); } catch (e) { setErr(e.message); } }
+  async function savePhoto(photo) { setErr(''); try { await api('/api/users/photo', { id: edit.u.id, photo }); setEdit(null); load(); } catch (e) { setErr(e.message); setEdit(null); } }
+  const pending = rows.filter(u => u.status === 'pending');
   const canEdit = u => isOwner || ['cashier', 'technician'].includes(u.role);
   return (
     <div>
@@ -35,19 +37,28 @@ export default function Users() {
         </div>
         <p className="muted" style={{ marginBottom: 0 }}>{ROLES[f.role]}</p>
       </div>
+      {pending.length > 0 && <div className="card scroll" style={{ marginBottom: 16, background: '#fffaf3', borderColor: '#f0cfa6' }}>
+        <h2>Registrations waiting for approval ({pending.length})</h2>
+        <table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Requested</th><th>Give access as</th><th /></tr></thead>
+          <tbody>{pending.map(u => (
+            <tr key={u.id}><td><b>{u.full_name}</b></td><td>{u.email}</td><td>{u.phone || ''}</td><td>{dt(u.created_at)}</td>
+              <td><select value={pick[u.id] || 'cashier'} onChange={e => setPick({ ...pick, [u.id]: e.target.value })}>{roles.map(r => <option key={r}>{r}</option>)}</select></td>
+              <td className="n"><button className="btn pri sm" onClick={() => upd(u, { decision: 'approve', role: pick[u.id] || 'cashier' })}>Approve</button>{' '}
+                <button className="btn bad sm" onClick={() => { if (confirm('Decline the registration of ' + u.full_name + '?')) upd(u, { decision: 'decline' }); }}>Decline</button></td></tr>))}</tbody></table></div>}
       <div className="card scroll"><table>
         <thead><tr><th>Photo</th><th>Name</th><th>Email</th><th>Access</th><th>Last sign-in</th><th>Status</th><th /></tr></thead>
-        <tbody>{rows.map(u => (
+        <tbody>{rows.filter(u => u.status === 'active').map(u => (
           <tr key={u.id} style={{ opacity: u.is_active ? 1 : .55 }}>
             <td><Avatar photo={u.photo} name={u.full_name} size={34} /></td><td><b>{u.full_name}</b> {u.online && <span className="tag ok">online</span>}</td><td>{u.email}</td>
             <td>{canEdit(u) && u.id !== me.id ? <select value={u.role} onChange={e => upd(u, { role: e.target.value })}>{roles.map(r => <option key={r}>{r}</option>)}</select> : u.role}</td>
             <td>{u.last_login ? dt(u.last_login) : <span className="muted">never</span>}</td>
             <td><span className={'tag ' + (u.is_active ? 'ok' : 'bad')}>{u.is_active ? 'active' : 'locked'}</span></td>
             <td className="n">{canEdit(u) && <>
-              <label className="btn sm" style={{ display: 'inline-block' }}>Photo<input type="file" accept="image/*" hidden onChange={e => setPhoto(u, e.target.files[0])} /></label>{' '}
+              <label className="btn sm" style={{ display: 'inline-block' }}>Photo<input type="file" accept="image/*" hidden onChange={e => { if (e.target.files[0]) setEdit({ u, file: e.target.files[0] }); e.target.value = ''; }} /></label>{' '}
               <button className="btn sm" onClick={() => { const p = prompt('New password for ' + u.full_name + ' (6+ characters)'); if (p) upd(u, { password: p }); }}>Reset password</button>{' '}
               {u.id !== me.id && <button className="btn sm" onClick={() => upd(u, { is_active: !u.is_active })}>{u.is_active ? 'Remove access' : 'Restore access'}</button>}</>}</td>
           </tr>))}</tbody></table></div>
+      {edit && <PhotoEditor file={edit.file} onSave={savePhoto} onCancel={() => setEdit(null)} />}
       <p className="muted">“Remove access” locks the account and signs the person out immediately. Their past sales and records are kept.</p>
     </div>
   );

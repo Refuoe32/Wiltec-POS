@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { api, money } from '@/lib/client';
+import { api, money, imageToSquare, imgUrl, initials } from '@/lib/client';
+import ExportBar from '@/components/ExportBar';
 import CameraScanner from '@/components/CameraScanner';
 const blank = { kind: 'product', sku: '', barcode: '', name: '', category_id: '', cost_price: '', sell_price: '', stock_qty: '', reorder_level: 2, has_serial: false, warranty_days: 0, vat_applies: true, is_active: true };
 export default function Inventory() {
@@ -21,13 +22,14 @@ export default function Inventory() {
   const set = (k, v) => setF(x => ({ ...x, [k]: v }));
   return (
     <div>
-      <div className="row"><h1 className="sp">Inventory</h1>{mgr && <button className="btn pri" onClick={() => { setErr(''); setF({ ...blank }); }}>Add item</button>}</div>
+      <div className="row"><h1 className="sp">Inventory</h1>{rows.length > 0 && <ExportBar name="stock-list" build={() => ({ title: 'Stock List', subtitle: 'Generated ' + new Date().toLocaleString('en-GB', { timeZone: 'Africa/Maseru' }), sections: [{ title: 'Items', head: ['SKU', 'Item', 'Category', ...(mgr ? ['Cost'] : []), 'Price', 'Stock'], rows: rows.map(r => [r.sku, r.name, r.category || '', ...(mgr ? [money(r.cost_price)] : []), money(r.sell_price), r.track_stock ? r.stock_qty : '-']) }] })} />}{mgr && <button className="btn pri" onClick={() => { setErr(''); setF({ ...blank }); }}>Add item</button>}</div>
       <input style={{ width: '100%', maxWidth: 420, marginBottom: 12 }} placeholder="Search…" value={q} onChange={e => setQ(e.target.value)} />
       {err && !f && !adj && <div className="err">{err}</div>}
       <div className="card scroll"><table>
-        <thead><tr><th>Item</th><th>SKU</th><th>Category</th>{mgr && <th className="n">Cost</th>}<th className="n">Price</th><th className="n">Stock</th><th /></tr></thead>
+        <thead><tr><th /><th>Item</th><th>SKU</th><th>Category</th>{mgr && <th className="n">Cost</th>}<th className="n">Price</th><th className="n">Stock</th><th /></tr></thead>
         <tbody>{rows.map(r => (
           <tr key={r.id} style={{ opacity: r.is_active ? 1 : .5 }}>
+            <td style={{ width: 52 }}><div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', background: '#e8edef', display: 'grid', placeItems: 'center', color: '#a3b2b9' }}>{r.has_image ? <img src={imgUrl(r)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <b style={{ fontSize: '.7rem' }}>{initials(r.name)}</b>}</div></td>
             <td><b>{r.name}</b> {r.kind === 'service' && <span className="tag">service</span>}{!r.is_active && <span className="tag bad">hidden</span>}</td>
             <td>{r.sku}</td><td>{r.category}</td>{mgr && <td className="n">{money(r.cost_price)}</td>}<td className="n">{money(r.sell_price)}</td>
             <td className="n">{r.track_stock ? <span className={'tag ' + (r.stock_qty <= 0 ? 'bad' : r.stock_qty <= r.reorder_level ? 'warn' : '')}>{r.stock_qty}</span> : '—'}</td>
@@ -48,6 +50,12 @@ export default function Inventory() {
           {!f.id && f.kind === 'product' && <div className="f"><label>Opening stock</label><input type="number" value={f.stock_qty} onChange={e => set('stock_qty', e.target.value)} /></div>}
           <div className="f"><label>Low-stock alert at</label><input type="number" value={f.reorder_level} onChange={e => set('reorder_level', e.target.value)} /></div>
           <div className="f"><label>Warranty (days)</label><input type="number" value={f.warranty_days} onChange={e => set('warranty_days', e.target.value)} /></div>
+        </div>
+        <div className="row" style={{ marginTop: 12 }}>
+          <div style={{ width: 72, height: 72, borderRadius: 10, overflow: 'hidden', background: '#e8edef', display: 'grid', placeItems: 'center', color: '#a3b2b9' }}>{(f.image || f.has_image) ? <img src={f.image || imgUrl(f)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <b>{initials(f.name)}</b>}</div>
+          <label className="btn sm" style={{ display: 'inline-flex' }}>{(f.image || f.has_image) ? 'Change product photo' : 'Add product photo'}<input type="file" accept="image/*" hidden onChange={async e => { const file = e.target.files[0]; if (file) { try { set('image', await imageToSquare(file)); } catch (x) { setErr(x.message); } } e.target.value = ''; }} /></label>
+          {(f.image || f.has_image) && <button className="btn sm bad" onClick={() => setF({ ...f, image: null, has_image: false, remove_image: true })}>Remove photo</button>}
+          <span className="muted" style={{ fontSize: '.78rem' }}>Shown on the sell screen. Cropped square automatically.</span>
         </div>
         <div className="row" style={{ margin: '12px 0' }}>
           <label><input type="checkbox" checked={f.has_serial} onChange={e => set('has_serial', e.target.checked)} /> Record serial number when sold</label>
