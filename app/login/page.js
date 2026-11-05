@@ -14,7 +14,7 @@ export default function Login() {
     try {
       const res = await api('/api/login', f);
       try { remember ? localStorage.setItem('wt_email', f.email) : localStorage.removeItem('wt_email'); } catch {}
-      location.href = res.role === 'technician' ? '/tasks' : '/pos';
+      location.href = res.role === 'technician' ? '/tasks' : res.role === 'cashier' ? '/touch' : '/dashboard';
     } catch (x) { setErr(x.message); setBusy(false); }
   }
   async function register(e) {

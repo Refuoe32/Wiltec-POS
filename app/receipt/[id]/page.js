@@ -4,7 +4,11 @@ import { api, money, dt, mlabel } from '@/lib/client';
 export default function Receipt({ params }) {
   const [d, setD] = useState(null), [err, setErr] = useState(''), bar = useRef(null);
   useEffect(() => { api('/api/sales/' + params.id + '?print=1').then(setD).catch(e => setErr(e.message)); }, [params.id]);
-  useEffect(() => { if (d && bar.current) import('jsbarcode').then(m => (m.default || m)(bar.current, d.sale.sale_no, { format: 'CODE128', height: 38, fontSize: 12, margin: 0, width: 1.6 })).catch(() => {}); }, [d]);
+  useEffect(() => {
+    if (!d || !bar.current) return;
+    const auto = new URLSearchParams(location.search).get('auto') === '1';     // opened by the keypad screen: print straight away
+    import('jsbarcode').then(m => (m.default || m)(bar.current, d.sale.sale_no, { format: 'CODE128', height: 38, fontSize: 12, margin: 0, width: 1.6 })).catch(() => {}).finally(() => { if (auto) setTimeout(() => window.print(), 500); });
+  }, [d]);
   if (err) return <p style={{ padding: 20 }}>{err}</p>;
   if (!d) return <p style={{ padding: 20 }}>Loading…</p>;
   const { sale, items, payments, settings: st, reprint } = d;

@@ -4,12 +4,15 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { api } from '@/lib/client';
 import Avatar from '@/components/Avatar';
+import Icon from '@/components/Icon';
 const IDLE_MIN = 30;   // keep equal to IDLE_MINUTES on the server (default 30)
-const ALL = ['owner', 'manager', 'cashier', 'technician'], MGR = ['owner', 'manager'], SELL = ['owner', 'manager', 'cashier'];
-const NAV = [
-  ['/pos', 'POS', SELL], ['/repairs', 'Repairs', ALL], ['/inventory', 'Inventory', ALL], ['/stock', 'Stock', MGR], ['/customers', 'Customers', SELL],
-  ['/purchasing', 'Purchasing', MGR], ['/register', 'Till', SELL], ['/daily', 'Daily report', SELL], ['/expenses', 'Expenses', MGR],
-  ['/dashboard', 'Reports', MGR], ['/activity', 'Staff activity', MGR], ['/users', 'Staff', MGR], ['/tasks', 'My tasks', ALL],
+const ALL = ['owner', 'manager', 'cashier', 'technician'], MGR = ['owner', 'manager'], SELL = ['owner', 'manager', 'cashier'], OWN = ['owner'];
+const MENU = [
+  ['MAIN', [['/dashboard', 'Dashboard', 'dashboard', MGR], ['/pos', 'POS', 'pos', SELL], ['/touch', 'Keypad POS', 'pos', SELL], ['/repairs', 'Repairs', 'repairs', ALL], ['/tasks', 'My tasks', 'tasks', ALL]]],
+  ['CATALOGUE', [['/inventory', 'Products', 'products', ALL], ['/categories', 'Categories', 'categories', MGR], ['/brands', 'Brands', 'brands', MGR], ['/suppliers', 'Suppliers', 'suppliers', MGR], ['/stock', 'Inventory', 'inventory', MGR], ['/purchasing', 'Purchasing', 'purchasing', MGR]]],
+  ['SALES', [['/customers', 'Customers', 'customers', SELL], ['/register', 'Till', 'till', SELL], ['/daily', 'Daily report', 'daily', SELL], ['/expenses', 'Expenses', 'expenses', MGR]]],
+  ['REPORTS', [['/reports', 'Reports', 'reports', MGR], ['/activity', 'Staff activity', 'activity', MGR], ['/users', 'Staff', 'staff', MGR]]],
+  ['SYSTEM', [['/email', 'Send Email', 'mail', MGR], ['/backup', 'System Backup', 'backup', OWN], ['/settings', 'System Settings', 'settings', OWN], ['/account', 'User Settings', 'user', ALL]]],
 ];
 export default function AppLayout({ children }) {
   const [me, setMe] = useState(null); const path = usePathname(); const lastAct = useRef(Date.now());
@@ -27,20 +30,25 @@ export default function AppLayout({ children }) {
     return () => { ev.forEach(e => window.removeEventListener(e, mark)); clearInterval(t); };
   }, []);
   async function out() { await api('/api/logout', {}); location.href = '/login'; }
+  if (path.startsWith('/touch')) return <>{children}</>;      // the keypad till screen uses the whole screen
   return (
     <div className="app">
       <nav className="side noprint">
-        <div className="brand">WILTEC SYSTEMS<small>Mokhotlong, Lesotho</small></div>
-        {me && NAV.filter(n => n[2].includes(me.role)).map(([h, l]) => <Link key={h} href={h} className={path.startsWith(h) ? 'on' : ''}>{l}</Link>)}
+        <div className="profile">
+          <Link href="/account" className="av" style={{ width: 78, height: 78 }}>{me ? <Avatar photo={me.photo} name={me.name} size={72} round /> : <span style={{ display: 'block', width: 72, height: 72 }} />}</Link>
+          <div className="role">{me ? me.role.toUpperCase() + ':' : ' '}</div><div className="nm">{me?.name}</div>
+        </div>
+        {me && MENU.map(([g, items]) => {
+          const vis = items.filter(i => i[3].includes(me.role));
+          return vis.length ? <div key={g}><div className="grp">{g}</div>{vis.map(([h, l, ic]) => <Link key={h} href={h} className={path.startsWith(h) ? 'on' : ''}><Icon name={ic} />{l}</Link>)}</div> : null;
+        })}
         <div className="fill" />
-        {me?.role === 'owner' && <Link href="/settings" className={path.startsWith('/settings') ? 'on' : ''}>Settings</Link>}
-        <Link href="/account" className={path.startsWith('/account') ? 'on' : ''}>My account</Link>
-        <button className="lnk" onClick={out}>Logout</button>
+        <button className="lnk logout" onClick={out}>LOGOUT</button>
       </nav>
       <div className="wrap">
         <header className="top noprint">
-          <span>Hello, <b>{me?.name || '…'}</b> <span className="muted">· {me?.role}</span></span>
-          {me && <Link href="/account"><Avatar photo={me.photo} name={me.name} size={38} round /></Link>}
+          <h2 className="title">WilTec POS System</h2>
+          {me && <Link href="/account" className="chip"><span>{me.name}</span></Link>}
         </header>
         <main className="main">{children}</main>
       </div>

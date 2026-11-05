@@ -3,12 +3,12 @@ import { useEffect, useState } from 'react';
 import { api, money, imageToSquare, imgUrl, initials } from '@/lib/client';
 import ExportBar from '@/components/ExportBar';
 import CameraScanner from '@/components/CameraScanner';
-const blank = { kind: 'product', sku: '', barcode: '', name: '', category_id: '', cost_price: '', sell_price: '', stock_qty: '', reorder_level: 2, has_serial: false, warranty_days: 0, vat_applies: true, is_active: true };
+const blank = { brand_id: '', kind: 'product', sku: '', barcode: '', name: '', category_id: '', cost_price: '', sell_price: '', stock_qty: '', reorder_level: 2, has_serial: false, warranty_days: 0, vat_applies: true, is_active: true };
 export default function Inventory() {
-  const [rows, setRows] = useState([]), [cats, setCats] = useState([]), [q, setQ] = useState(''), [f, setF] = useState(null), [adj, setAdj] = useState(null), [err, setErr] = useState(''), [me, setMe] = useState({}), [cam, setCam] = useState(false);
+  const [rows, setRows] = useState([]), [cats, setCats] = useState([]), [q, setQ] = useState(''), [f, setF] = useState(null), [adj, setAdj] = useState(null), [err, setErr] = useState(''), [me, setMe] = useState({}), [cam, setCam] = useState(false), [brands, setBrands] = useState([]);
   const mgr = ['owner', 'manager'].includes(me.role);
   const load = () => api('/api/items?all=1&q=' + encodeURIComponent(q)).then(setRows).catch(e => setErr(e.message));
-  useEffect(() => { api('/api/me').then(setMe); api('/api/categories').then(setCats); }, []);
+  useEffect(() => { api('/api/me').then(setMe); api('/api/categories').then(setCats); api('/api/brands').then(setBrands); }, []);
   useEffect(() => { const t = setTimeout(load, 200); return () => clearTimeout(t); }, [q]);
   async function save() {
     setErr('');
@@ -22,7 +22,7 @@ export default function Inventory() {
   const set = (k, v) => setF(x => ({ ...x, [k]: v }));
   return (
     <div>
-      <div className="row"><h1 className="sp">Inventory</h1>{rows.length > 0 && <ExportBar name="stock-list" build={() => ({ title: 'Stock List', subtitle: 'Generated ' + new Date().toLocaleString('en-GB', { timeZone: 'Africa/Maseru' }), sections: [{ title: 'Items', head: ['SKU', 'Item', 'Category', ...(mgr ? ['Cost'] : []), 'Price', 'Stock'], rows: rows.map(r => [r.sku, r.name, r.category || '', ...(mgr ? [money(r.cost_price)] : []), money(r.sell_price), r.track_stock ? r.stock_qty : '-']) }] })} />}{mgr && <button className="btn pri" onClick={() => { setErr(''); setF({ ...blank }); }}>Add item</button>}</div>
+      <div className="row"><h1 className="sp">Products</h1>{rows.length > 0 && <ExportBar name="stock-list" build={() => ({ title: 'Stock List', subtitle: 'Generated ' + new Date().toLocaleString('en-GB', { timeZone: 'Africa/Maseru' }), sections: [{ title: 'Items', head: ['SKU', 'Item', 'Category', ...(mgr ? ['Cost'] : []), 'Price', 'Stock'], rows: rows.map(r => [r.sku, r.name, r.category || '', ...(mgr ? [money(r.cost_price)] : []), money(r.sell_price), r.track_stock ? r.stock_qty : '-']) }] })} />}{mgr && <button className="btn pri" onClick={() => { setErr(''); setF({ ...blank }); }}>Add item</button>}</div>
       <input style={{ width: '100%', maxWidth: 420, marginBottom: 12 }} placeholder="Search…" value={q} onChange={e => setQ(e.target.value)} />
       {err && !f && !adj && <div className="err">{err}</div>}
       <div className="card scroll"><table>
@@ -30,7 +30,7 @@ export default function Inventory() {
         <tbody>{rows.map(r => (
           <tr key={r.id} style={{ opacity: r.is_active ? 1 : .5 }}>
             <td style={{ width: 52 }}><div style={{ width: 40, height: 40, borderRadius: 8, overflow: 'hidden', background: '#e8edef', display: 'grid', placeItems: 'center', color: '#a3b2b9' }}>{r.has_image ? <img src={imgUrl(r)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <b style={{ fontSize: '.7rem' }}>{initials(r.name)}</b>}</div></td>
-            <td><b>{r.name}</b> {r.kind === 'service' && <span className="tag">service</span>}{!r.is_active && <span className="tag bad">hidden</span>}</td>
+            <td><b>{r.name}</b>{r.brand && <span className="muted"> · {r.brand}</span>} {r.kind === 'service' && <span className="tag">service</span>}{!r.is_active && <span className="tag bad">hidden</span>}</td>
             <td>{r.sku}</td><td>{r.category}</td>{mgr && <td className="n">{money(r.cost_price)}</td>}<td className="n">{money(r.sell_price)}</td>
             <td className="n">{r.track_stock ? <span className={'tag ' + (r.stock_qty <= 0 ? 'bad' : r.stock_qty <= r.reorder_level ? 'warn' : '')}>{r.stock_qty}</span> : '—'}</td>
             <td className="n">{mgr && <>{r.track_stock && <button className="btn sm" onClick={() => { setErr(''); setAdj({ item_id: r.id, name: r.name, qty_change: '', type: 'adjustment', note: '' }); }}>Adjust stock</button>} <button className="btn sm" onClick={() => { setErr(''); setF({ ...r }); }}>Edit</button></>}</td>
@@ -45,6 +45,7 @@ export default function Inventory() {
           <div className="f"><label>SKU</label><input value={f.sku} onChange={e => set('sku', e.target.value)} /></div>
           <div className="f"><label>Barcode (click here and scan, or use the camera)</label><div className="row" style={{ flexWrap: 'nowrap' }}><input value={f.barcode || ''} onChange={e => set('barcode', e.target.value)} onKeyDown={e => e.key === 'Enter' && e.preventDefault()} /><button type="button" className="btn sm" onClick={() => setCam(true)}>Camera</button></div></div>
           <div className="f"><label>Category <a href="#" onClick={e => { e.preventDefault(); newCat(); }}>+ new</a></label><select value={f.category_id || ''} onChange={e => set('category_id', e.target.value)}><option value="">—</option>{cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
+          <div className="f"><label>Brand</label><select value={f.brand_id || ''} onChange={e => set('brand_id', e.target.value)}><option value="">—</option>{brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
           <div className="f"><label>Cost price (M)</label><input type="number" step="0.01" value={f.cost_price} onChange={e => set('cost_price', e.target.value)} /></div>
           <div className="f"><label>Selling price (M, VAT included)</label><input type="number" step="0.01" value={f.sell_price} onChange={e => set('sell_price', e.target.value)} /></div>
           {!f.id && f.kind === 'product' && <div className="f"><label>Opening stock</label><input type="number" value={f.stock_qty} onChange={e => set('stock_qty', e.target.value)} /></div>}

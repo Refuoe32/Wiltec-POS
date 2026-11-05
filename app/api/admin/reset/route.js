@@ -20,9 +20,10 @@ export const POST = route(['owner'], async ({ s, body: b }) => {
       await c.query('update items set stock_qty=0, updated_at=now() where track_stock');
     }
     if (b.products) {
-      await c.query('delete from items'); await c.query('delete from categories'); await c.query('delete from suppliers');
+      await c.query('delete from items'); await c.query('delete from brands'); await c.query('delete from categories'); await c.query('delete from suppliers');
       const [cat] = (await c.query("insert into categories(name) values('Repair Services') returning id")).rows;
       await c.query("insert into items(kind,sku,name,category_id,sell_price,cost_price,track_stock,vat_applies) values('service','SRV-REPAIR','Repair job (labour & parts)',$1,0,0,false,true)", [cat.id]);
+      await c.query("insert into items(kind,sku,name,sell_price,cost_price,track_stock,vat_applies) values('service','SRV-MISC','Miscellaneous item',0,0,false,true)");
     }
     if (b.customers && wipe) await c.query('delete from customers');
     await c.query(`insert into audit_log(user_id,action,entity,details) values($1,'system.reset','system',$2)`, [s.id, JSON.stringify({ transactions: !!b.transactions, zeroStock: !!b.zeroStock, products: !!b.products, customers: !!(b.customers && wipe) })]);

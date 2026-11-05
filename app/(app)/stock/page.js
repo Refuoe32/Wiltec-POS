@@ -9,7 +9,7 @@ export default function Stock() {
   const tabs = [['in', 'Add new stock'], ['clear', 'Clear old stock'], ['moves', 'Stock history'], ...(me.role === 'owner' ? [['fresh', 'Start fresh']] : [])];
   return (
     <div>
-      <h1>Stock</h1>
+      <h1>Inventory (stock control)</h1>
       <div className="row" style={{ marginBottom: 14 }}>{tabs.map(([k, l]) => <button key={k} className={'btn' + (tab === k ? ' pri' : '')} onClick={() => { setTab(k); setMsg(''); setErr(''); }}>{l}</button>)}</div>
       {msg && <div className="okmsg">{msg}</div>}{err && <div className="err">{err}</div>}
       {tab === 'in' && <AddStock done={setMsg} fail={setErr} />}

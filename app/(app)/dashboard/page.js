@@ -1,45 +1,38 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { api, money, mlabel } from '@/lib/client';
-import ExportBar from '@/components/ExportBar';
+import Link from 'next/link';
+import { api, money, dt, mlabel } from '@/lib/client';
+import Icon from '@/components/Icon';
+import LineChart from '@/components/LineChart';
 export default function Dashboard() {
-  const [d, setD] = useState(null), [err, setErr] = useState('');
-  useEffect(() => { api('/api/reports').then(setD).catch(e => setErr(e.message)); }, []);
+  const [d, setD] = useState(null), [err, setErr] = useState(''), [me, setMe] = useState({});
+  const load = () => api('/api/dashboard').then(setD).catch(e => setErr(e.message));
+  useEffect(() => { load(); api('/api/me').then(setMe); const t = setInterval(load, 60000); return () => clearInterval(t); }, []);
   if (err) return <div className="err">{err}</div>;
   if (!d) return <p>Loading…</p>;
-  const max = Math.max(1, ...d.daily.map(x => x.total));
-  const net = d.profit - d.expenses;
-  const build = () => ({
-    title: 'Business Report', subtitle: 'Generated ' + new Date().toLocaleString('en-GB', { timeZone: 'Africa/Maseru' }),
-    sections: [
-      { title: 'Key figures', rows: [['Sales today', `${money(d.today.total)} (${d.today.n} sales)`], ['Sales this month', `${money(d.month.total)} (${d.month.n} sales)`], ['Gross profit this month (ex. VAT)', money(d.profit)], ['Expenses this month', money(d.expenses)], ['Profit after expenses', money(net)], ['VAT collected this month', money(d.month.vat)], ['Open repair jobs', d.openRepairs], ['Owed by customers', money(d.owing)], ['Stock value at cost', money(d.stockValue.cost)], ['Stock value at retail', money(d.stockValue.retail)]] },
-      { title: 'Sales, last 14 days', head: ['Day', 'Sales'], rows: d.daily.map(x => [x.day, money(x.total)]) },
-      { title: 'Best sellers (30 days)', head: ['Item', 'Units', 'Value'], rows: d.top.map(t => [t.name, t.units, money(t.revenue)]) },
-      { title: 'Payments by method (30 days)', head: ['Method', 'Amount'], rows: d.methods.map(m => [mlabel(m.method), money(m.total)]) },
-      { title: 'Low stock', head: ['Item', 'In stock', 'Alert level'], rows: d.low.map(l => [l.name, l.stock_qty, l.reorder_level]) },
-    ],
-  });
+  const tile = (cls, href, icon, label, sub) => <Link href={href} className={'tilec ' + cls}><Icon name={icon} size={46} />{label}<small>{sub}</small></Link>;
   return (
     <div>
-      <div className="row" style={{ marginBottom: 14 }}><h1 className="sp" style={{ margin: 0 }}>Reports</h1><ExportBar name="business-report" build={build} /></div>
-      <div className="grid g4" style={{ marginBottom: 16 }}>
-        <div className="card stat"><b>{money(d.today.total)}</b><span>Sales today ({d.today.n})</span></div>
-        <div className="card stat"><b>{money(d.month.total)}</b><span>Sales this month ({d.month.n})</span></div>
-        <div className="card stat"><b>{money(d.profit)}</b><span>Gross profit this month (ex. VAT)</span></div>
-        <div className="card stat"><b style={{ color: net < 0 ? 'var(--bad)' : 'inherit' }}>{money(net)}</b><span>After expenses {money(d.expenses)}</span></div>
-        <div className="card stat"><b>{d.openRepairs}</b><span>Open repair jobs</span></div>
-        <div className="card stat"><b>{money(d.owing)}</b><span>Owed by customers</span></div>
-        <div className="card stat"><b>{money(d.month.vat)}</b><span>VAT collected this month</span></div>
-        <div className="card stat"><b>{money(d.stockValue.cost)}</b><span>Stock at cost (retail {money(d.stockValue.retail)})</span></div>
+      <div className="dash-title">Dashboard</div>
+      <div className="tiles4">
+        {tile('t1', '/inventory', 'products', 'Products', `${d.products} items · ${d.low_stock} low stock`)}
+        {tile('t2', '/users', 'customers', 'Users', `${d.staff} staff · ${d.online} online`)}
+        {tile('t3', '/reports', 'reports', 'Reports', `Today ${money(d.today_total)} (${d.today_count} sales)`)}
+        {tile('t4', me.role === 'owner' ? '/settings' : '/account', 'settings', 'Settings', `${d.open_repairs} open repair jobs`)}
       </div>
-      <div className="card" style={{ marginBottom: 16 }}><h2>Sales, last 14 days</h2>
-        <div className="bars">{d.daily.map(x => <i key={x.day} style={{ height: (x.total / max) * 100 + '%' }} title={`${x.day}: ${money(x.total)}`} />)}</div>
-        <div className="row muted" style={{ justifyContent: 'space-between', fontSize: '.8rem' }}><span>{d.daily[0]?.day}</span><span>{d.daily.at(-1)?.day}</span></div></div>
-      <div className="grid g3">
-        <div className="card scroll"><h2>Best sellers (30 days)</h2><table><tbody>{d.top.map(t => <tr key={t.name}><td>{t.name}</td><td className="n">{t.units}</td><td className="n">{money(t.revenue)}</td></tr>)}</tbody></table></div>
-        <div className="card scroll"><h2>Payments by method (30 days)</h2><table><tbody>{d.methods.map(m => <tr key={m.method}><td>{mlabel(m.method)}</td><td className="n">{money(m.total)}</td></tr>)}</tbody></table></div>
-        <div className="card scroll"><h2>Low stock</h2><table><tbody>{d.low.map(l => <tr key={l.id}><td>{l.name}</td><td className="n"><span className={'tag ' + (l.stock_qty <= 0 ? 'bad' : 'warn')}>{l.stock_qty}</span></td></tr>)}</tbody></table>{!d.low.length && <p className="muted">All stocked up.</p>}</div>
-      </div>
+      <div className="sect">Sales, profit and expenses · last 14 days</div>
+      <LineChart labels={d.daily.map(x => x.day)} series={[
+        { name: 'Expenses', color: '#772727', values: d.daily.map(x => x.expenses) },
+        { name: 'Sales', color: '#4aa3df', values: d.daily.map(x => x.sales) },
+        { name: 'Gross profit', color: '#f0ad5a', values: d.daily.map(x => x.profit) }]} />
+      <div className="legend"><span><i style={{ background: '#4aa3df' }} />Sales</span><span><i style={{ background: '#f0ad5a' }} />Gross profit</span><span><i style={{ background: '#772727' }} />Expenses</span></div>
+      <div className="sect">RECENT TRANSACTIONS<button className="refresh" title="Refresh" onClick={load}>⟳</button></div>
+      <div className="tbl-wrap"><table>
+        <thead><tr><th>Receipt</th><th className="n">Total</th><th>Date</th><th className="n">Items</th><th>Payment</th><th>Cashier</th><th>Status</th></tr></thead>
+        <tbody>{d.recent.map(r => <tr key={r.id} className="click" onClick={() => window.open('/receipt/' + r.id, '_blank')}>
+          <td><b>{r.sale_no}</b></td><td className="n">{money(r.total)}</td><td>{dt(r.created_at)}</td><td className="n">{r.qty}</td><td>{(r.methods || '').split(', ').map(mlabel).join(', ')}</td><td>{r.cashier}</td>
+          <td>{r.status === 'completed' ? <span className="tag ok">paid</span> : <span className="tag bad">{r.status}</span>}</td></tr>)}</tbody></table>
+        {!d.recent.length && <p className="muted" style={{ padding: 14 }}>No sales yet. Open your till and make the first sale on the POS screen.</p>}</div>
     </div>
   );
 }

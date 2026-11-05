@@ -1,0 +1,7 @@
+-- Brands for products (safe to run more than once)
+CREATE TABLE IF NOT EXISTS brands (
+  id   SERIAL PRIMARY KEY,
+  name TEXT UNIQUE NOT NULL
+);
+ALTER TABLE items ADD COLUMN IF NOT EXISTS brand_id INT REFERENCES brands(id) ON DELETE SET NULL;
+ALTER TABLE brands ENABLE ROW LEVEL SECURITY;
